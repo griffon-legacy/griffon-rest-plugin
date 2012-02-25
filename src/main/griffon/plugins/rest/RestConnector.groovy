@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2011 the original author or authors.
+ * Copyright 2009-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package griffon.plugins.rest
 
-import griffon.util.ApplicationHolder
 import griffon.util.CallableWithArgs
 import groovyx.net.http.AsyncHTTPBuilder
 import groovyx.net.http.HTTPBuilder
@@ -29,60 +28,37 @@ import java.lang.reflect.InvocationTargetException
  * @author Andres Almiray
  */
 @Singleton
-class RestConnector { 
+class RestConnector implements RestProvider { 
     private final Map BUILDERS = new ConcurrentHashMap()
     
-    static void enhance(MetaClass mc, Object instance = null) {
-        mc.withAsyncHttp = {Map args, Closure closure ->
-            RestConnector.instance.withAsyncHttp(instance, args, closure)   
-        }
-        mc.withAsyncHttp << {Map args, CallableWithArgs callable ->
-            RestConnector.instance.withAsyncHttp(instance, args, callable)   
-        }
-        mc.withHttp = {Map args, Closure closure ->
-            RestConnector.instance.withHttp(instance, args, closure)   
-        }
-        mc.withHttp << {Map args, CallableWithArgs callable ->
-            RestConnector.instance.withHttp(instance, args, callable)   
-        }
-        mc.withRest = {Map args, Closure closure ->
-            RestConnector.instance.withRest(instance, args, closure)   
-        }
-        mc.withRest << {Map args, CallableWithArgs callable ->
-            RestConnector.instance.withRest(instance, args, callable)   
-        }        
-    }
-    
-    // ======================================================
-    
-    Object withAsyncHttp(Object instance = null, Map params, Closure closure) {
-        return doWithBuilder(AsyncHTTPBuilder, instance, params, closure)
+    Object withAsyncHttp(Map params, Closure closure) {
+        return doWithBuilder(AsyncHTTPBuilder, params, closure)
     }
        
-    Object withHttp(Object instance = null, Map params, Closure closure) {
-        return doWithBuilder(HTTPBuilder, instance, params, closure)
+    Object withHttp(Map params, Closure closure) {
+        return doWithBuilder(HTTPBuilder, params, closure)
     } 
        
-    Object withRest(Object instance = null, Map params, Closure closure) {
-        return doWithBuilder(RESTClient, instance, params, closure)
+    Object withRest(Map params, Closure closure) {
+        return doWithBuilder(RESTClient, params, closure)
     }
     
-    public <T> T withAsyncHttp(Object instance = null, Map params, CallableWithArgs<T> callable) {
-        return doWithBuilder(AsyncHTTPBuilder, instance, params, callable)
+    public <T> T withAsyncHttp(Map params, CallableWithArgs<T> callable) {
+        return doWithBuilder(AsyncHTTPBuilder, params, callable)
     } 
   
-    public <T> T withHttp(Object instance = null, Map params, CallableWithArgs<T> callable) {
-        return doWithBuilder(HTTPBuilder, instance, params, callable)
+    public <T> T withHttp(Map params, CallableWithArgs<T> callable) {
+        return doWithBuilder(HTTPBuilder, params, callable)
     } 
 
-    public <T> T withRest(Object instance = null, Map params, CallableWithArgs<T> callable) {
-        return doWithBuilder(RESTClient, instance, params, callable)
+    public <T> T withRest(Map params, CallableWithArgs<T> callable) {
+        return doWithBuilder(RESTClient, params, callable)
     }
 
     // ======================================================
 
-    private Object doWithBuilder(Class klass, Object instance, Map params, Closure closure) {
-        def builder = configureBuilder(klass, instance, params)
+    private Object doWithBuilder(Class klass, Map params, Closure closure) {
+        def builder = configureBuilder(klass, params)
 
         if (closure) {
             closure.delegate = builder
@@ -92,8 +68,8 @@ class RestConnector {
         return null
     }
 
-    private <T> T doWithBuilder(Class klass, Object instance, Map params, CallableWithArgs<T> callable) {
-        def builder = configureBuilder(klass, instance, params)
+    private <T> T doWithBuilder(Class klass, Map params, CallableWithArgs<T> callable) {
+        def builder = configureBuilder(klass, params)
 
         if (callable) {
             callable.args = [builder] as Object[]
@@ -102,24 +78,14 @@ class RestConnector {
         return null
     }
 
-    private configureBuilder(Class klass, Object instance, Map params) {
+    private configureBuilder(Class klass, Map params) {
         def builder = null
         if (params.id) {
             String id = params.remove('id').toString()
-            if(instance != null) {
-                MetaClass mc = ApplicationHolder.application.artifactManager.findGriffonClass(instance).metaClass
-                if (mc.hasProperty(instance, id)) {
-                    builder = instance."$id"
-                } else {
-                    builder = makeBuilder(klass, params)
-                    mc."$id" = builder
-                }
-            } else {
-                builder = BUILDERS[id]
-                if(builder == null) {
-                    builder = makeBuilder(klass, params)
-                    BUILDERS[id] = builder 
-                }
+            builder = BUILDERS[id]
+            if(builder == null) {
+                builder = makeBuilder(klass, params)
+                BUILDERS[id] = builder 
             }
         } else {
             builder = makeBuilder(klass, params)
@@ -138,7 +104,7 @@ class RestConnector {
         if (klass == AsyncHTTPBuilder) {
             try {
                 Map args = [:]
-                ['threadPool', 'poolSize', 'uri', 'contentType', 'timeout'].each { arg ->
+                for(arg in ['threadPool', 'poolSize', 'uri', 'contentType', 'timeout']) {
                     if (params[(arg)] != null) args[(arg)] = params[(arg)]
                 }
                 return klass.newInstance(args)

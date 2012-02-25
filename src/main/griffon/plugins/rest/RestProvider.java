@@ -1,5 +1,5 @@
 /*
- * Copyright 2009-2012 the original author or authors.
+ * Copyright 2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package griffon.plugins.rest;
 
-import griffon.core.GriffonClass
-import griffon.plugins.rest.RestEnhancer
+import java.util.Map;
+import groovy.lang.Closure;
+import griffon.util.CallableWithArgs;
 
 /**
  * @author Andres Almiray
  */
-class RestGriffonAddon {
-    void addonPostInit(GriffonApplication app) {
-        def types = app.config.griffon?.rest?.injectInto ?: ['controller']
-        for(String type : types) {
-            for(GriffonClass gc : app.artifactManager.getClassesOfType(type)) {
-                RestEnhancer.enhance(gc.metaClass)
-            }
-        }
-    }
+public interface RestProvider {
+    Object withAsyncHttp(Map params, Closure closure);
+    
+    Object withHttp(Map params, Closure closure);
+    
+    Object withRest(Map params, Closure closure);
+    
+    <T> T withAsyncHttp(Map params, CallableWithArgs<T> callable);
+    
+    <T> T withHttp(Map params, CallableWithArgs<T> callable);
+    
+    <T> T withRest(Map params, CallableWithArgs<T> callable);
 }
