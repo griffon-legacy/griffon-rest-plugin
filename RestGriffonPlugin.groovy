@@ -203,7 +203,6 @@ types something that is not a number the client will surely break, but the code 
 
         griffon run-app
 
-
 Testing
 -------
 Dynamic methods will not be automatically injected during unit testing, because addons are simply not initialized

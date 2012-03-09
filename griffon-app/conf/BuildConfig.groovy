@@ -1,14 +1,12 @@
 griffon.project.dependency.resolution = {
     inherits("global")
     repositories {
-        griffonPlugins()
         griffonHome()
-        griffonCentral()
         mavenCentral()
         mavenRepo name: 'Codehaus', root: 'http://repository.codehaus.org', m2compatible: true
     }
     dependencies {
-        compile('org.codehaus.groovy.modules.http-builder:http-builder:0.5.1') {
+        compile('org.codehaus.groovy.modules.http-builder:http-builder:0.5.2') {
             excludes 'commons-logging', 'xml-apis', 'groovy', 'log4j', 'xercesImpl'
         }
     }
@@ -22,5 +20,16 @@ griffon {
     }
 }
 
-griffon.jars.destDir='target/addon'
-griffon.plugin.pack.additional.sources = ['src/gdsl']
+log4j = {
+    // Example of changing the log pattern for the default console
+    // appender:
+    appenders {
+        console name: 'stdout', layout: pattern(conversionPattern: '%d [%t] %-5p %c - %m%n')
+    }
+
+    error 'org.codehaus.griffon',
+          'org.springframework',
+          'org.apache.karaf',
+          'groovyx.net'
+    warn  'griffon'
+}
