@@ -1,5 +1,5 @@
 griffon.project.dependency.resolution = {
-    inherits("global")
+    inherits "global"
     repositories {
         griffonHome()
         mavenCentral()
@@ -8,6 +8,18 @@ griffon.project.dependency.resolution = {
     dependencies {
         compile('org.codehaus.groovy.modules.http-builder:http-builder:0.5.2') {
             excludes 'commons-logging', 'xml-apis', 'groovy', 'log4j', 'xercesImpl'
+        }
+        compile('org.apache.httpcomponents:httpclient:4.1.2',
+                'net.sf.json-lib:json-lib:2.4:jdk15',
+                'net.sf.ezmorph:ezmorph:1.0.6',
+                'commons-beanutils:commons-beanutils:1.8.0',
+                'commons-lang:commons-lang:2.6',
+                'commons-collections:commons-collections:3.2.1',
+                'commons-codec:commons-codec:1.6',
+                'org.apache.httpcomponents:httpcore:4.1.2',
+                'xml-resolver:xml-resolver:1.2',
+                'xerces:xercesImpl:2.9.1') {
+            excludes 'commons-logging'
         }
     }
 }

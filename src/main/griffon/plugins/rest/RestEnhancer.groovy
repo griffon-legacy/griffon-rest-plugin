@@ -16,14 +16,19 @@
 package griffon.plugins.rest
 
 import griffon.util.CallableWithArgs
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * @author Andres Almiray
  */
 final class RestEnhancer {
+    private static final Logger LOG = LoggerFactory.getLogger(RestEnhancer)
+
     private RestEnhancer() {}
     
     static void enhance(MetaClass mc, RestProvider provider = RestConnector.instance) {
+        if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withRest = {Map params, Closure closure ->
             provider.withRest(params, closure)
         }
