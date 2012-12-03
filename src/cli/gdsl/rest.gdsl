@@ -14,26 +14,13 @@
  * limitations under the License.
  */
 
-package griffon.plugins.rest;
-
-import griffon.util.CallableWithArgs;
-import groovy.lang.Closure;
-
-import java.util.Map;
+package gdsl
 
 /**
  * @author Andres Almiray
  */
-public interface RestProvider {
-    <R> R withAsyncHttp(Map<String, Object> params, Closure<R> closure);
 
-    <R> R withHttp(Map<String, Object> params, Closure<R> closure);
-
-    <R> R withRest(Map<String, Object> params, Closure<R> closure);
-
-    <R> R withAsyncHttp(Map<String, Object> params, CallableWithArgs<R> callable);
-
-    <R> R withHttp(Map<String, Object> params, CallableWithArgs<R> callable);
-
-    <R> R withRest(Map<String, Object> params, CallableWithArgs<R> callable);
+contributor(scope: annotatedScope(ctype: 'griffon.plugins.rest.RestAware')) {
+    delegatesTo(findClass('griffon.plugins.rest.RestContributionHandler'))
 }
+

@@ -19,11 +19,11 @@
  */
 class RestGriffonPlugin {
     // the plugin version
-    String version = '0.8.1'
+    String version = '1.0.0'
     // the version or versions of Griffon the plugin is designed for
-    String griffonVersion = '0.9.5 > *'
+    String griffonVersion = '1.2.0 > *'
     // the other plugins this plugin depends on
-    Map dependsOn = [:]
+    Map dependsOn = [lombok: '0.4']
     // resources that are included in plugin packaging
     List pluginIncludes = []
     // the plugin license
@@ -46,18 +46,22 @@ class RestGriffonPlugin {
             email: 'aalmiray@yahoo.com'
         ]
     ]
-    String title = 'REST client support'
+    String title = 'Lightweight HTTP/REST/SOAP client support'
 
     String description = '''
-The REST plugin enables the usage of [HTTPBuilder][1] on a Griffon application.
+The Rest plugin enables the usage of [groovy-rest][1] on a Griffon application.
 
 Usage
 -----
+
 The plugin will inject the following dynamic methods:
 
-* `withRest(Map params, Closure stmts)` - executes stmts using a RESTClient
-* `withHttp(Map params, Closure stmts)` - executes stmts using an HTTPClient
-* `withAsyncHttp(Map params, Closure stmts)` - executes stmts using an AsyncHTTPClient
+ * `<R> R withRest(Map<String, Object> params, Closure<R> stmts)` - executes stmts using a RESTClient
+ * `<R> R withHttp(Map<String, Object> params, Closure<R> stmts)` - executes stmts using an HTTPBuilder
+ * `<R> R withAsyncHttp(Map<String, Object> params, Closure<R> stmts)` - executes stmts using a AsyncHTTPBuilder
+ * `<R> R withRest(Map<String, Object> params, CallableWithArgs<R> stmts)` - executes stmts using a RESTClient
+ * `<R> R withHttp(Map<String, Object> params, CallableWithArgs<R> stmts)` - executes stmts using an HTTPBuilder
+ * `<R> R withAsyncHttp(Map<String, Object> params, CallableWithArgs<R> stmts)` - executes stmts using a AsyncHTTPBuilder
 
 Where params may contain
 
@@ -67,9 +71,10 @@ Where params may contain
 | contentType  | String          |          |
 | id           | String          |          |
 
-All dynamic methods will create a new client when invoked unless you define an `id:` attribute.
-When this attribute is supplied the client will be stored in a cache managed by the `RestProvider` that
-handled the call. You may specify parameters for configuring an HTTP proxy, for example
+All dynamic methods will create a new client when invoked unless you define an
+`id:` attribute. When this attribute is supplied the client will be stored in a
+cache managed by the `RestProvider` that handled the call. You may specify
+parameters for configuring an HTTP proxy, for example
 
 | Property     | Type            | Required | Default |
 | ------------ | --------------- | -------- | ------- |
@@ -93,22 +98,35 @@ The method `withAsyncHttp` accepts the following additional properties
 | poolSize   | int             |
 | timeout    | int             |
 
-These methods are also accessible to any component through the singleton `griffon.plugins.rest.RestEnhancer`.
-You can inject these methods to non-artifacts via metaclasses. Simply grab hold of a particular metaclass and call
-`RestEnhancer.enhance(metaClassInstance)`.
+These methods are also accessible to any component through the singleton
+`griffon.plugins.rest.RestEnhancer`. You can inject these methods to
+non-artifacts via metaclasses. Simply grab hold of a particular metaclass and
+call `RestEnhancer.enhance(metaClassInstance)`.
 
 Configuration
 -------------
-### Dynamic method injection
+
+### RestAware AST Transformation
+
+The preferred way to mark a class for method injection is by annotating it with
+`@griffon.plugins.rest.RestAware`. This transformation injects the
+`griffon.plugins.rest.RestContributionHandler` interface and default behavior
+that fulfills the contract.
+
+### Dynamic Method Injection
 
 Dynamic methods will be added to controllers by default. You can
 change this setting by adding a configuration flag in `griffon-app/conf/Config.groovy`
 
     griffon.rest.injectInto = ['controller', 'service']
 
+Dynamic method injection wil skipped for classes implementing
+`griffon.plugins.rest.RestContributionHandler`.
+
 ### Example
 
-This example relies on [Grails][2] as the service provider. Follow these steps to configure the service on the Grails side:
+This example relies on [Grails][2] as the service provider. Follow these steps
+to configure the service on the Grails side:
 
 1. Download a copy of [Grails][3] and install it.
 2. Create a new Grails application. We'll pick 'exporter' as the application name.
@@ -134,13 +152,14 @@ This example relies on [Grails][2] as the service provider. Follow these steps t
 5. Run the application
 
         grails run-app
-    
+
 Now we're ready to build the Griffon application
 
-1. Create a new Griffon application. We'll pick `calculator` as the application name
+1. Create a new Griffon application. We'll pick `calculator` as the application
+   name
 
         griffon create-app calculator
-    
+
 2. Install the rest plugin
 
         griffon install-plugin rest
@@ -162,7 +181,7 @@ Now we're ready to build the Griffon application
             textField(columns: 20, text: bind(target: model, targetProperty: 'num2'))
             label('Result:')
             label(text: bind{model.result})
-            button('Calculate', enabled: bind{model.enabled}, actionPerformed: controller.calculate)
+            button(calculateAction, enabled: bind{model.enabled})
         }
 
 4. Let's add required properties to the model
@@ -176,10 +195,13 @@ Now we're ready to build the Griffon application
             boolean enabled = true
         }
 
-5. Now for the controller code. Notice that there is minimal error handling in place. If the user
-types something that is not a number the client will surely break, but the code is sufficient for now.
+5. Now for the controller code. Notice that there is minimal error handling in
+   place. If the user types something that is not a number the client will
+   surely break, but the code is sufficient for now.
 
         package calculator
+        import rest.rest.ContentType
+        @griffon.plugins.rest.RestAware
         class CalculatorController {
             def model
 
@@ -188,9 +210,9 @@ types something that is not a number the client will surely break, but the code 
                 String b = model.num2
                 execInsideUIAsync { model.enabled = false }
                 try {
-                    def result = withRest(uri: 'http://localhost:8080/exporter/calculator/', id: 'client') {
-                        def response = get(path: 'add', params: [a: a, b: b])
-                        response.data.result
+                    def result = withRest(url: 'http://localhost:8080/exporter/calculator/', id: 'client') {
+                        def response = get(path: 'add', query: [a: a, b: b], accept: ContentType.JSON)
+                        response.json.result
                     }
                     execInsideUIAsync { model.result = result }
                 } finally {
@@ -203,31 +225,102 @@ types something that is not a number the client will surely break, but the code 
 
         griffon run-app
 
-Testing
--------
-Dynamic methods will not be automatically injected during unit testing, because addons are simply not initialized
-for this kind of tests. However you can use `RestEnhancer.enhance(metaClassInstance, restProviderInstance)` where 
-`restProviderInstance` is of type `griffon.plugins.rest.RestProvider`. The contract for this interface looks like this
+The plugin exposes a Java friendly API to make the exact same calls from Java,
+or any other JVM language for that matter. Here's for example the previous code
+rewritten in Java. Note the usage of @RestWare on a Java class
 
-    public interface RestProvider {
-        Object withRest(Map params, Closure closure);
-        Object withHttp(Map params, Closure closure);
-        Object withAsyncHttp(Map params, Closure closure);
-        <T> T withRest(Map params, CallableWithArgs<T> callable);
-        <T> T withHttp(Map params, CallableWithArgs<T> callable);
-        <T> T withAsyncHttp(Map params, CallableWithArgs<T> callable);
+    package calculator;
+    import static griffon.util.CollectionUtils.newMap;
+    import griffon.util.CallableWithArgs;
+    import griffon.util.CollectionUtils;
+    import groovyx.net.http.HttpResponseDecorator;
+    import groovyx.net.http.RESTClient;
+    import java.awt.event.ActionEvent;
+    import java.util.Map;
+    import net.sf.json.JSONObject;
+    import org.codehaus.griffon.runtime.core.AbstractGriffonController;
+    @griffon.plugins.rest.RestAware
+    public class CalculatorController extends AbstractGriffonController {
+        private CalculatorModel model;
+
+        public void setModel(CalculatorModel model) {
+            this.model = model;
+        }
+
+        public void calculate(ActionEvent event) {
+            final String a = model.getNum1();
+            final String b = model.getNum2();
+            enableModel(false);
+            try {
+                Map<String, Object> params = CollectionUtils.<String, Object> map()
+                        .e("uri", "http://localhost:8080/exporter/calculator/")
+                        .e("id", "client");
+                final String result = withRest(params,
+                        new CallableWithArgs<String>() {
+                            public String call(Object[] args) {
+                                RESTClient client = (RESTClient) args[0];
+                                try {
+                                    HttpResponseDecorator response = (HttpResponseDecorator) client.get(
+                                        newMap(
+                                            "path", "add",  
+                                            "query", newMap("a", a, "b", b)));
+                                    JSONObject json = (JSONObject) response.getData();
+                                    return json.getString("result");
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                return "";
+                            }
+                        });
+                execInsideUIAsync(new Runnable() {
+                    public void run() {
+                        model.setResult(result);
+                    }
+                });
+            } finally {
+                enableModel(true);
+            }
+        }
+
+        private void enableModel(final boolean enabled) {
+            execInsideUIAsync(new Runnable() {
+                public void run() {
+                    model.setEnabled(enabled);
+                }
+            });
+        }
     }
 
-It's up to you define how these methods need to be implemented for your tests. For example, here's an implementation that never
-fails regardless of the arguments it receives
+
+Testing
+-------
+
+Dynamic methods will not be automatically injected during unit testing, because
+addons are simply not initialized for this kind of tests. However you can use
+`RestEnhancer.enhance(metaClassInstance, restProviderInstance)` where
+`restProviderInstance` is of type `griffon.plugins.rest.RestProvider`.
+The contract for this interface looks like this
+
+    public interface RestProvider {
+        <R> R withAsyncHttp(Map<String, Object> params, Closure<R> closure);
+        <R> R withHttp(Map<String, Object> params, Closure<R> closure);
+        <R> R withRest(Map<String, Object> params, Closure<R> closure);
+        <R> R withAsyncHttp(Map<String, Object> params, CallableWithArgs<R> callable);
+        <R> R withHttp(Map<String, Object> params, CallableWithArgs<R> callable);
+        <R> R withRest(Map<String, Object> params, CallableWithArgs<R> callable);
+    }
+
+It's up to you define how these methods need to be implemented for your tests.
+For example, here's an implementation that never fails regardless of the
+arguments it receives
 
     class MyRestProvider implements RestProvider {
-        Object withRest(Map params, Closure closure) { null }
-        Object withHttp(Map params, Closure closure) { null }
-        Object withAsyncHttp(Map params, Closure closure) { null }
-        public <T> T withRest(Map params, CallableWithArgs<T> callable) { null }
-        public <T> T withHttp(Map params, CallableWithArgs<T> callable) { null }
-        public <T> T withAsyncHttp(Map params, CallableWithArgs<T> callable) { null }
+        public <R> R withAsyncHttp(Map<String, Object> params, Closure<R> closure) { null }
+        public <R> R withHttp(Map<String, Object> params, Closure<R> closure) { null }
+        public <R> R withRest(Map<String, Object> params, Closure<R> closure) { null }
+        public <R> R withAsyncHttp(Map<String, Object> params, CallableWithArgs<R> callable) { null }
+        public <R> R withHttp(Map<String, Object> params, CallableWithArgs<R> callable) { null }
+        public <R> R withRest(Map<String, Object> params, CallableWithArgs<R> callable) { null }
     }
     
 This implementation may be used in the following way
@@ -240,9 +333,97 @@ This implementation may be used in the following way
         }
     }
 
+On the other hand, if the service is annotated with `@RestAware` then usage
+of `RestEnhancer` should be avoided at all costs. Simply set
+`restProviderInstance` on the service instance directly, like so, first the
+service definition
+
+    @griffon.plugins.rest.RestAware
+    class MyService {
+        def serviceMethod() { ... }
+    }
+
+Next is the test
+
+    class MyServiceTests extends GriffonUnitTestCase {
+        void testSmokeAndMirrors() {
+            MyService service = new MyService()
+            service.restProvider = new MyRestProvider()
+            // exercise service methods
+        }
+    }
+
+Tool Support
+------------
+
+### DSL Descriptors
+
+This plugin provides DSL descriptors for Intellij IDEA and Eclipse (provided
+you have the Groovy Eclipse plugin installed). These descriptors are found
+inside the `griffon-rest-compile-x.y.z.jar`, with locations
+
+ * dsdl/rest.dsld
+ * gdsl/rest.gdsl
+
+### Lombok Support
+
+Rewriting Java AST in a similar fashion to Groovy AST transformations is
+posisble thanks to the [lombok][4] plugin.
+
+#### JavaC
+
+Support for this compiler is provided out-of-the-box by the command line tools.
+There's no additional configuration required.
+
+#### Eclipse
+
+Follow the steps found in the [Lombok][4] plugin for setting up Eclipse up to
+number 5.
+
+ 6. Go to the path where the `lombok.jar` was copied. This path is either found
+    inside the Eclipse insatllation directory or in your local settings. Copy
+    the following file from the project's working directory
+
+         $ cp $USER_HOME/.griffon/<version>/projects/<project>/plugins/rest-<version>/dist/griffon-rest-compile-<version>.jar .
+
+ 6. Edit the launch script for Eclipse and tweak the boothclasspath entry so
+    that includes the file you just copied
+
+        -Xbootclasspath/a:lombok.jar:lombok-pg-<version>.jar:\
+        griffon-lombok-compile-<version>.jargriffon-rest-compile-<version>.jar
+
+ 7. Launch Eclipse once more. Eclipse should be able to provide content assist
+    for Java classes annotated with `@RestAware`.
+
+#### NetBeans
+
+Follow the instructions found in [Annotation Processors Support in the NetBeans
+IDE, Part I: Using Project Lombok][6]. You may need to specify
+`lombok.core.AnnotationProcessor` in the list of Annotation Processors.
+
+NetBeans should be able to provide code suggestions on Java classes annotated
+with `@RestAware`.
+
+#### Intellij IDEA
+
+Follow the steps found in the [Lombok][4] plugin for setting up Intellij IDEA
+up to number 5.
+
+ 6. Copy `griffon-rest-compile-<version>.jar` to the `lib` directory
+
+         $ pwd
+           $USER_HOME/Library/Application Support/IntelliJIdea11/lombok-plugin
+         $ cp $USER_HOME/.griffon/<version>/projects/<project>/plugins/rest-<version>/dist/griffon-rest-compile-<version>.jar lib
+
+ 7. Launch IntelliJ IDEA once more. Code completion should work now for Java
+    classes annotated with `@RestAware`.
 
 [1]: http://groovy.codehaus.org/modules/http-builder
 [2]: http://grails.org
 [3]: http://grails.org/Download
+[4]: /plugin/lombok
+[5]: /plugin/eclipse-support
+[6]: http://netbeans.org/kb/docs/java/annotations-lombok.html
+[7]: http://code.google.com/p/lombok-intellij-plugin
 '''
 }

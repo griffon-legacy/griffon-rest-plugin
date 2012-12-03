@@ -24,7 +24,11 @@ import java.util.Map;
 /**
  * @author Andres Almiray
  */
-public interface RestProvider {
+public interface RestContributionHandler {
+    void setRestProvider(RestProvider provider);
+
+    RestProvider getRestProvider();
+
     <R> R withAsyncHttp(Map<String, Object> params, Closure<R> closure);
 
     <R> R withHttp(Map<String, Object> params, Closure<R> closure);

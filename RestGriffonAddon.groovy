@@ -16,6 +16,7 @@
 
 import griffon.core.GriffonClass
 import griffon.plugins.rest.RestEnhancer
+import griffon.plugins.rest.RestContributionHandler
 
 /**
  * @author Andres Almiray
@@ -25,6 +26,7 @@ class RestGriffonAddon {
         def types = app.config.griffon?.rest?.injectInto ?: ['controller']
         for(String type : types) {
             for(GriffonClass gc : app.artifactManager.getClassesOfType(type)) {
+                if (RestContributionHandler.isAssignableFrom(gc.clazz)) continue
                 RestEnhancer.enhance(gc.metaClass)
             }
         }

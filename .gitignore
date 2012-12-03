@@ -1,2 +1,6 @@
 target
 release_notes.md
+.idea
+rest-griffonPluginFixes.iml
+rest-griffonPlugins.iml
+rest.iml

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package griffon.plugins.rest
 
 import griffon.util.CallableWithArgs
@@ -27,7 +28,7 @@ final class RestEnhancer {
 
     private RestEnhancer() {}
     
-    static void enhance(MetaClass mc, RestProvider provider = RestConnector.instance) {
+    static void enhance(MetaClass mc, RestProvider provider = DefaultRestProvider.instance) {
         if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withRest = {Map params, Closure closure ->
             provider.withRest(params, closure)
