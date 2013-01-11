@@ -120,7 +120,7 @@ change this setting by adding a configuration flag in `griffon-app/conf/Config.g
 
     griffon.rest.injectInto = ['controller', 'service']
 
-Dynamic method injection wil skipped for classes implementing
+Dynamic method injection will be skipped for classes implementing
 `griffon.plugins.rest.RestContributionHandler`.
 
 ### Example
@@ -368,7 +368,7 @@ inside the `griffon-rest-compile-x.y.z.jar`, with locations
 ### Lombok Support
 
 Rewriting Java AST in a similar fashion to Groovy AST transformations is
-posisble thanks to the [lombok][4] plugin.
+possible thanks to the [lombok][4] plugin.
 
 #### JavaC
 
