@@ -36,13 +36,11 @@ class RestClientHolder {
         INSTANCE
     }
 
+    private RestClientHolder() {}
+
     private final Map<String, HTTPBuilder> HTTP = new ConcurrentHashMap<String, HTTPBuilder>()
     private final Map<String, RESTClient> REST = new ConcurrentHashMap<String, RESTClient>()
     private final Map<String, AsyncHTTPBuilder> ASYNC_HTTP = new ConcurrentHashMap<String, AsyncHTTPBuilder>()
-
-    private RestClientHolder() {
-
-    }
 
     String[] getHttpClientIds() {
         List<String> ids = []

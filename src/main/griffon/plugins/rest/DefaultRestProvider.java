@@ -36,6 +36,8 @@ public class DefaultRestProvider extends AbstractRestProvider {
         return INSTANCE;
     }
 
+    private DefaultRestProvider() {}
+
     @Override
     protected HTTPBuilder getHttpClient(Map<String, Object> params) {
         return RestClientHolder.getInstance().fetchHttpClient(params);
